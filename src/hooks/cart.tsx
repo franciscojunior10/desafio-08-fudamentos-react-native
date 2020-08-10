@@ -30,23 +30,95 @@ const CartProvider: React.FC = ({ children }) => {
 
   useEffect(() => {
     async function loadProducts(): Promise<void> {
-      // TODO LOAD ITEMS FROM ASYNC STORAGE
+      const productsInCart = await AsyncStorage.getItem('@GoMarketplace:cart');
+
+      if (productsInCart) {
+        setProducts(JSON.parse(productsInCart));
+      }
     }
 
     loadProducts();
   }, []);
 
-  const addToCart = useCallback(async product => {
-    // TODO ADD A NEW ITEM TO THE CART
-  }, []);
+  const increment = useCallback(
+    async (id: string) => {
+      const productIndex = products.findIndex(product => product.id === id);
 
-  const increment = useCallback(async id => {
-    // TODO INCREMENTS A PRODUCT QUANTITY IN THE CART
-  }, []);
+      const product = products[productIndex];
 
-  const decrement = useCallback(async id => {
-    // TODO DECREMENTS A PRODUCT QUANTITY IN THE CART
-  }, []);
+      const updatedProduct = {
+        ...product,
+        quantity: product.quantity + 1,
+      };
+
+      const updatedProducts = products;
+
+      updatedProducts[productIndex] = updatedProduct;
+
+      setProducts([...updatedProducts]);
+
+      await AsyncStorage.setItem(
+        '@GoMarketplace:cart',
+        JSON.stringify(products),
+      );
+    },
+    [products],
+  );
+
+  const decrement = useCallback(
+    async (id: string) => {
+      const productIndex = products.findIndex(product => product.id === id);
+
+      const product = products[productIndex];
+
+      const updatedProducts = [...products];
+
+      if (!product.quantity) {
+        return;
+      }
+
+      if (product.quantity > 1) {
+        product.quantity -= 1;
+
+        updatedProducts[productIndex] = product;
+      } else {
+        updatedProducts.splice(productIndex, 1);
+      }
+
+      setProducts(updatedProducts);
+
+      await AsyncStorage.setItem(
+        '@GoMarketplace:cart',
+        JSON.stringify(updatedProducts),
+      );
+    },
+    [products],
+  );
+
+  const addToCart = useCallback(
+    async (product: Product) => {
+      const productIndex = products.find(
+        productItem => productItem.id === product.id,
+      );
+
+      if (productIndex) {
+        increment(product.id);
+        return;
+      }
+
+      const updatedProducts = products;
+
+      updatedProducts.push({ ...product, quantity: 1 });
+
+      setProducts([...updatedProducts]);
+
+      await AsyncStorage.setItem(
+        '@GoMarketplace:cart',
+        JSON.stringify(updatedProducts),
+      );
+    },
+    [products, increment],
+  );
 
   const value = React.useMemo(
     () => ({ addToCart, increment, decrement, products }),
